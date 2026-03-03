@@ -230,7 +230,7 @@ function generateWallpaperSvg(params: {
   const barHeight = clamp(Math.round(width * 0.0058), 5, 10);
   const barRadius = Math.round(barHeight / 2);
 
-  const verticalNudge = clamp(Math.round(height * 0.04), 18, 92);
+  const verticalNudge = clamp(Math.round(height * 0.06), 18, 130);
   const topPadding = clamp(Math.round(panelHeight * 0.22) + verticalNudge, 160, 460);
   const bottomPadding = clamp(Math.round(panelHeight * 0.08), 30, 68);
 

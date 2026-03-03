@@ -213,7 +213,8 @@ function generateWallpaperSvg(params: {
   const todayIndex = clamp(daysInclusive(start, today) - 1, 0, totalDays - 1);
   const panelX = Math.round(width * 0.07);
   const panelWidth = width - panelX * 2;
-  const panelY = Math.round(height * 0.16);
+  const verticalNudge = clamp(Math.round(height * 0.1), 18, 220);
+  const panelY = Math.round(height * 0.16) + verticalNudge;
   const panelHeight = Math.round(height * 0.68);
   const panelRadius = clamp(Math.round(width * 0.023), 16, 34);
 
@@ -230,8 +231,7 @@ function generateWallpaperSvg(params: {
   const barHeight = clamp(Math.round(width * 0.0058), 5, 10);
   const barRadius = Math.round(barHeight / 2);
 
-  const verticalNudge = clamp(Math.round(height * 0.1), 18, 220);
-  const topPadding = clamp(Math.round(panelHeight * 0.22) + verticalNudge, 160, 460);
+  const topPadding = clamp(Math.round(panelHeight * 0.22), 160, 460);
   const bottomPadding = clamp(Math.round(panelHeight * 0.08), 30, 68);
 
   const goalY = panelY + topPadding + goalFontSize;

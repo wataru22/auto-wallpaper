@@ -253,6 +253,7 @@ function generateWallpaperSvg(params: {
   const doneColor = '#e5e7eb';
   const currentColor = '#ff8a00';
   const pendingColor = '#2f333d';
+  const dotRadius = Math.max(1.5, layout.dot * 0.43);
 
   for (let i = 0; i < dotsToRender; i += 1) {
     const row = Math.floor(i / layout.columns);
@@ -260,7 +261,7 @@ function generateWallpaperSvg(params: {
     const cx = contentX + col * (layout.dot + layout.gap) + layout.dot / 2;
     const cy = gridTop + row * (layout.dot + layout.gap) + layout.dot / 2;
     const fill = i < todayIndex ? doneColor : i === todayIndex ? currentColor : pendingColor;
-    dots.push(`<circle cx="${cx}" cy="${cy}" r="${layout.dot / 2}" fill="${fill}" />`);
+    dots.push(`<circle cx="${cx}" cy="${cy}" r="${dotRadius}" fill="${fill}" />`);
   }
 
   const startText = formatFriendlyDate(start);

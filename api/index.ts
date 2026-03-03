@@ -1,4 +1,6 @@
 import { Resvg } from '@resvg/resvg-js';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 type PhoneModel = {
   label: string;
@@ -18,6 +20,27 @@ const DEFAULT_MODEL_KEY = 'iphone15';
 const MAX_DOTS = 5000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const FONT_FILES = ['Inter.ttf'] as const;
+
+let cachedFontFiles: string[] | null = null;
+
+function loadFontFiles(): string[] {
+  if (cachedFontFiles) {
+    return cachedFontFiles;
+  }
+
+  const files: string[] = [];
+
+  for (const fileName of FONT_FILES) {
+    const filePath = fileURLToPath(new URL(`../fonts/${fileName}`, import.meta.url));
+    if (existsSync(filePath)) {
+      files.push(filePath);
+    }
+  }
+
+  cachedFontFiles = files;
+  return files;
+}
 
 function clamp(value: number, min: number, max: number): number {
   if (value < min) return min;
@@ -189,44 +212,40 @@ function generateWallpaperSvg(params: {
   const dotsToRender = Math.min(totalDays, MAX_DOTS);
   const todayIndex = clamp(daysInclusive(start, today) - 1, 0, totalDays - 1);
 
-  const contentWidth = Math.round(width * 0.74);
-  const contentX = Math.round((width - contentWidth) / 2);
+  const contentWidth = Math.round(width * 0.62);
+  const contentX = Math.round(width * 0.12);
 
-  const goalFontSize = clamp(Math.round(width * 0.09), 46, 110);
-  const rangeFontSize = clamp(Math.round(width * 0.026), 18, 30);
-  const daysFontSize = clamp(Math.round(width * 0.21), 94, 235);
-  const subtitleFontSize = clamp(Math.round(width * 0.043), 28, 52);
-  const metaFontSize = clamp(Math.round(width * 0.024), 16, 30);
-  const barHeight = clamp(Math.round(width * 0.01), 8, 16);
+  const goalFontSize = clamp(Math.round(width * 0.065), 34, 72);
+  const rangeFontSize = clamp(Math.round(width * 0.02), 14, 22);
+  const statusFontSize = clamp(Math.round(width * 0.038), 24, 46);
+  const metaFontSize = clamp(Math.round(width * 0.018), 13, 20);
+  const barHeight = clamp(Math.round(width * 0.006), 5, 10);
   const barRadius = Math.round(barHeight / 2);
 
-  const dotAreaHeight = Math.round(height * 0.36);
+  const dotAreaHeight = Math.round(height * 0.19);
   const layout = calculateDotLayout(dotsToRender, contentWidth, dotAreaHeight);
   const gridHeight = layout.rows * layout.dot + (layout.rows - 1) * layout.gap;
 
   const contentHeight =
     goalFontSize +
-    26 +
+    18 +
     rangeFontSize +
-    38 +
-    daysFontSize +
-    12 +
-    subtitleFontSize +
-    28 +
+    24 +
+    statusFontSize +
+    20 +
     barHeight +
-    36 +
+    24 +
     gridHeight +
-    34 +
+    22 +
     metaFontSize;
 
-  const contentTop = Math.round((height - contentHeight) / 2);
+  const contentTop = Math.round(height * 0.36);
   const goalY = contentTop + goalFontSize;
-  const rangeY = goalY + 26 + rangeFontSize;
-  const daysY = rangeY + 38 + daysFontSize;
-  const statusY = daysY + 12 + subtitleFontSize;
-  const barY = statusY + 28;
-  const gridTop = barY + barHeight + 36;
-  const footerY = gridTop + gridHeight + 34 + metaFontSize;
+  const rangeY = goalY + 18 + rangeFontSize;
+  const statusY = rangeY + 24 + statusFontSize;
+  const barY = statusY + 20;
+  const gridTop = barY + barHeight + 24;
+  const footerY = gridTop + gridHeight + 22 + metaFontSize;
 
   const dots: string[] = [];
   const doneColor = '#ffffff';
@@ -246,18 +265,18 @@ function generateWallpaperSvg(params: {
   const deadlineText = formatFriendlyDate(deadline);
   const escapedGoal = escapeXml(goal);
 
-  const statusLabel =
+  const statusRight =
     remaining > 0 ? `${remaining} days left` : remaining === 0 ? 'Goal date is today' : 'Goal complete';
+  const statusLabel = `${Math.round(progress * 100)}% // ${statusRight}`;
 
   return `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="${width}" height="${height}" fill="#000000" />
 
-    <text x="${contentX}" y="${goalY}" fill="#ffffff" font-size="${goalFontSize}" font-weight="700" font-family="SF Pro Display, Arial, sans-serif">${escapedGoal}</text>
-    <text x="${contentX}" y="${rangeY}" fill="#a1a1a1" font-size="${rangeFontSize}" font-family="SF Pro Text, Arial, sans-serif">${startText} → ${deadlineText}</text>
+    <text x="${contentX}" y="${goalY}" fill="#ffffff" font-size="${goalFontSize}" font-weight="700" font-family="Inter, Arial, sans-serif">${escapedGoal}</text>
+    <text x="${contentX}" y="${rangeY}" fill="#a1a1a1" font-size="${rangeFontSize}" font-family="Inter, Arial, sans-serif">${startText} → ${deadlineText}</text>
 
-    <text x="${contentX}" y="${daysY}" fill="#ffffff" font-size="${daysFontSize}" font-weight="700" font-family="SF Pro Display, Arial, sans-serif">${remaining}</text>
-    <text x="${contentX}" y="${statusY}" fill="#d0d0d0" font-size="${subtitleFontSize}" font-family="SF Pro Text, Arial, sans-serif">${escapeXml(statusLabel)}</text>
+    <text x="${contentX}" y="${statusY}" fill="#e0e0e0" font-size="${statusFontSize}" font-weight="600" font-family="Inter, Arial, sans-serif">${escapeXml(statusLabel)}</text>
 
     <rect x="${contentX}" y="${barY}" width="${contentWidth}" height="${barHeight}" rx="${barRadius}" fill="#3f3f3f" />
     <rect x="${contentX}" y="${barY}" width="${Math.max(0, Math.round(contentWidth * progress))}" height="${barHeight}" rx="${barRadius}" fill="#ffffff" />
@@ -266,10 +285,10 @@ function generateWallpaperSvg(params: {
       ${dots.join('\n')}
     </g>
 
-    <text x="${contentX}" y="${footerY}" fill="#8d8d8d" font-size="${metaFontSize}" font-family="SF Pro Text, Arial, sans-serif">${elapsed}/${totalDays} days complete • TZ ${escapeXml(tz)}</text>
+    <text x="${contentX}" y="${footerY}" fill="#8d8d8d" font-size="${metaFontSize}" font-family="Inter, Arial, sans-serif">${elapsed}/${totalDays} days complete • TZ ${escapeXml(tz)}</text>
     ${
       truncated
-        ? `<text x="${contentX}" y="${footerY - metaFontSize - 8}" fill="#c89359" font-size="${metaFontSize}" font-family="SF Pro Text, Arial, sans-serif">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
+        ? `<text x="${contentX}" y="${footerY - metaFontSize - 8}" fill="#c89359" font-size="${metaFontSize}" font-family="Inter, Arial, sans-serif">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
         : ''
     }
   </svg>
@@ -569,12 +588,18 @@ function imageResponse(
   height: number,
   options?: { download?: boolean },
 ): Response {
+  const fontFiles = loadFontFiles();
   const renderer = new Resvg(svg, {
     fitTo: {
       mode: 'width',
       value: width,
     },
     background: 'rgba(0,0,0,1)',
+    font: {
+      loadSystemFonts: true,
+      defaultFontFamily: 'Inter',
+      fontFiles,
+    },
   });
 
   const png = renderer.render().asPng();

@@ -211,46 +211,48 @@ function generateWallpaperSvg(params: {
   const truncated = totalDays > MAX_DOTS;
   const dotsToRender = Math.min(totalDays, MAX_DOTS);
   const todayIndex = clamp(daysInclusive(start, today) - 1, 0, totalDays - 1);
+  const panelX = Math.round(width * 0.07);
+  const panelWidth = width - panelX * 2;
+  const panelY = Math.round(height * 0.16);
+  const panelHeight = Math.round(height * 0.68);
+  const panelRadius = clamp(Math.round(width * 0.023), 16, 34);
 
-  const contentWidth = Math.round(width * 0.62);
-  const contentX = Math.round(width * 0.12);
+  const insetX = clamp(Math.round(panelWidth * 0.06), 24, 74);
+  const contentX = panelX + insetX;
+  const contentWidth = panelWidth - insetX * 2;
 
-  const goalFontSize = clamp(Math.round(width * 0.065), 34, 72);
-  const rangeFontSize = clamp(Math.round(width * 0.02), 14, 22);
-  const statusFontSize = clamp(Math.round(width * 0.038), 24, 46);
-  const metaFontSize = clamp(Math.round(width * 0.018), 13, 20);
-  const barHeight = clamp(Math.round(width * 0.006), 5, 10);
+  const baseGoalFontSize = clamp(Math.round(width * 0.066), 32, 78);
+  const goalScale = clamp(1 - Math.max(goal.length - 14, 0) * 0.02, 0.56, 1);
+  const goalFontSize = Math.round(baseGoalFontSize * goalScale);
+  const rangeFontSize = clamp(Math.round(width * 0.019), 13, 24);
+  const statusFontSize = clamp(Math.round(width * 0.029), 20, 40);
+  const metaFontSize = clamp(Math.round(width * 0.016), 12, 18);
+  const barHeight = clamp(Math.round(width * 0.0058), 5, 10);
   const barRadius = Math.round(barHeight / 2);
 
-  const dotAreaHeight = Math.round(height * 0.19);
-  const layout = calculateDotLayout(dotsToRender, contentWidth, dotAreaHeight);
-  const gridHeight = layout.rows * layout.dot + (layout.rows - 1) * layout.gap;
+  const topPadding = clamp(Math.round(panelHeight * 0.22), 160, 460);
+  const bottomPadding = clamp(Math.round(panelHeight * 0.08), 30, 68);
 
-  const contentHeight =
-    goalFontSize +
-    18 +
-    rangeFontSize +
-    24 +
-    statusFontSize +
-    20 +
-    barHeight +
-    24 +
-    gridHeight +
-    22 +
-    metaFontSize;
-
-  const contentTop = Math.round(height * 0.36);
-  const goalY = contentTop + goalFontSize;
+  const goalY = panelY + topPadding + goalFontSize;
   const rangeY = goalY + 18 + rangeFontSize;
-  const statusY = rangeY + 24 + statusFontSize;
-  const barY = statusY + 20;
-  const gridTop = barY + barHeight + 24;
-  const footerY = gridTop + gridHeight + 22 + metaFontSize;
+  const statusY = rangeY + 22 + statusFontSize;
+  const barY = statusY + 15;
+  const gridTop = barY + barHeight + 26;
+
+  const footerReserve = truncated ? metaFontSize * 2 + 22 : metaFontSize + 12;
+  const maxGridBottom = panelY + panelHeight - bottomPadding - footerReserve;
+  const dotAreaHeight = Math.max(68, maxGridBottom - gridTop);
+
+  const wideDotAreaHeight = Math.max(56, Math.round(dotAreaHeight * 0.58));
+  const layout = calculateDotLayout(dotsToRender, contentWidth, wideDotAreaHeight);
+  const gridHeight = layout.rows * layout.dot + (layout.rows - 1) * layout.gap;
+  const footerY = gridTop + gridHeight + 16 + metaFontSize;
+  const truncationY = footerY - metaFontSize - 11;
 
   const dots: string[] = [];
-  const doneColor = '#ffffff';
+  const doneColor = '#e5e7eb';
   const currentColor = '#ff8a00';
-  const pendingColor = '#5b5b5b';
+  const pendingColor = '#2f333d';
 
   for (let i = 0; i < dotsToRender; i += 1) {
     const row = Math.floor(i / layout.columns);
@@ -266,29 +268,31 @@ function generateWallpaperSvg(params: {
   const escapedGoal = escapeXml(goal);
 
   const statusRight =
-    remaining > 0 ? `${remaining} days left` : remaining === 0 ? 'Goal date is today' : 'Goal complete';
+    remaining > 0 ? `${remaining} days left` : remaining === 0 ? 'deadline is today' : 'goal complete';
   const statusLabel = `${Math.round(progress * 100)}% // ${statusRight}`;
+  const progressWidth = Math.max(0, Math.round(contentWidth * progress));
 
   return `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="${width}" height="${height}" fill="#000000" />
+    <rect x="0" y="0" width="${width}" height="${height}" fill="#050608" />
+    <rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="none" stroke="#111319" />
 
-    <text x="${contentX}" y="${goalY}" fill="#ffffff" font-size="${goalFontSize}" font-weight="700" font-family="Inter, Arial, sans-serif">${escapedGoal}</text>
-    <text x="${contentX}" y="${rangeY}" fill="#a1a1a1" font-size="${rangeFontSize}" font-family="Inter, Arial, sans-serif">${startText} → ${deadlineText}</text>
+    <text x="${contentX}" y="${goalY}" fill="#f5f5f6" font-size="${goalFontSize}" font-weight="700" font-family="Inter, ui-monospace, Menlo, monospace">${escapedGoal}</text>
+    <text x="${contentX}" y="${rangeY}" fill="#a3abba" font-size="${rangeFontSize}" font-weight="500" font-family="ui-monospace, Menlo, monospace">${startText} -> ${deadlineText}</text>
 
-    <text x="${contentX}" y="${statusY}" fill="#e0e0e0" font-size="${statusFontSize}" font-weight="600" font-family="Inter, Arial, sans-serif">${escapeXml(statusLabel)}</text>
+    <text x="${contentX}" y="${statusY}" fill="#dde1e8" font-size="${statusFontSize}" font-weight="600" font-family="ui-monospace, Menlo, monospace">${escapeXml(statusLabel)}</text>
 
-    <rect x="${contentX}" y="${barY}" width="${contentWidth}" height="${barHeight}" rx="${barRadius}" fill="#3f3f3f" />
-    <rect x="${contentX}" y="${barY}" width="${Math.max(0, Math.round(contentWidth * progress))}" height="${barHeight}" rx="${barRadius}" fill="#ffffff" />
+    <rect x="${contentX}" y="${barY}" width="${contentWidth}" height="${barHeight}" rx="${barRadius}" fill="#262a32" />
+    <rect x="${contentX}" y="${barY}" width="${progressWidth}" height="${barHeight}" rx="${barRadius}" fill="#d7dce5" />
 
     <g>
       ${dots.join('\n')}
     </g>
 
-    <text x="${contentX}" y="${footerY}" fill="#8d8d8d" font-size="${metaFontSize}" font-family="Inter, Arial, sans-serif">${elapsed}/${totalDays} days complete • TZ ${escapeXml(tz)}</text>
+    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="ui-monospace, Menlo, monospace">${elapsed}/${totalDays} days complete // TZ ${escapeXml(tz)}</text>
     ${
       truncated
-        ? `<text x="${contentX}" y="${footerY - metaFontSize - 8}" fill="#c89359" font-size="${metaFontSize}" font-family="Inter, Arial, sans-serif">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
+        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="ui-monospace, Menlo, monospace">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
         : ''
     }
   </svg>
@@ -305,174 +309,359 @@ function renderPage(origin: string): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Goal Wallpaper URL</title>
+  <title>goal-wallpaper.dev</title>
   <style>
     :root {
-      --bg: #070b14;
-      --panel: #101726;
-      --line: #2a2a2a;
-      --text: #f4f7ff;
-      --muted: #b2b2b2;
-      --accent: #7ee2b8;
-      --warn: #f3c971;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: #000;
-      color: var(--text);
-      font-family: "Avenir Next", "SF Pro Text", "Segoe UI", sans-serif;
-      line-height: 1.45;
+      --bg: #040507;
+      --panel: rgba(255, 255, 255, 0.02);
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #e6e8ec;
+      --muted: #9da3af;
+      --soft: #808693;
+      --darkText: #0f1114;
     }
     .wrap {
       max-width: 980px;
       margin: 0 auto;
-      padding: 28px 20px 56px;
+      padding: 72px 24px 96px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.5;
+    }
+    .hero {
+      margin-bottom: 44px;
     }
     h1 {
-      font-size: clamp(34px, 5vw, 52px);
-      margin: 0 0 8px;
+      margin: 0;
+      font-family: Inter, "Avenir Next", "Segoe UI", sans-serif;
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: 1;
       letter-spacing: -0.02em;
+      color: #f2f4f7;
     }
-    .lead {
-      margin: 0 0 26px;
+    .tagline {
+      margin: 14px 0 0;
       color: var(--muted);
-      font-size: 19px;
-      max-width: 720px;
+      font-size: clamp(16px, 2vw, 28px);
     }
-    .panel {
-      border: 1px solid var(--line);
-      background: #0b0b0b;
-      border-radius: 16px;
-      padding: 18px;
+    .intro {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: clamp(14px, 1.3vw, 20px);
       margin-bottom: 18px;
     }
-    .step {
+    .intro p {
+      margin: 0;
+    }
+    .metaLine {
+      margin-top: 16px;
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 14px;
+      color: #b5bac4;
+      font-size: clamp(14px, 1.2vw, 18px);
     }
-    .badge {
-      width: 34px;
-      height: 34px;
-      border-radius: 6px;
-      background: #f1f4ff;
-      color: #0a0f17;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 auto;
+    .metaLine .slash {
+      color: var(--soft);
     }
-    .step h2 {
-      margin: 0;
-      font-size: clamp(24px, 3vw, 36px);
-      letter-spacing: -0.02em;
+    .jump {
+      margin: 34px 0 20px;
+      color: #c4c9d3;
+      font-size: clamp(16px, 1.4vw, 22px);
+    }
+    .sectionTitle {
+      margin: 0 0 12px;
+      font-family: Inter, "Avenir Next", "Segoe UI", sans-serif;
+      font-size: clamp(24px, 3.4vw, 40px);
+      letter-spacing: -0.015em;
+      color: #f0f2f6;
+    }
+    .card {
+      margin-bottom: 22px;
+      border-top: 1px solid var(--line);
+      background: transparent;
+      border-radius: 0;
+      padding: 18px 0 0;
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+      margin-top: 14px;
     }
-    .full { grid-column: 1 / -1; }
+    .full {
+      grid-column: 1 / -1;
+    }
     label {
       display: block;
-      color: #d6d6d6;
+      color: #b2b9c6;
       margin-bottom: 6px;
-      font-size: 14px;
-      letter-spacing: 0.02em;
+      font-size: 11px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
+      font-weight: 500;
     }
     input, select {
       width: 100%;
-      border: 1px solid #343434;
-      background: #070707;
+      border: none;
+      background: rgba(255, 255, 255, 0.04);
       color: var(--text);
-      border-radius: 10px;
-      padding: 13px 12px;
-      font-size: 20px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: background-color 0.14s ease;
+    }
+    input[type="date"] {
+      color-scheme: dark;
+    }
+    input:focus, select:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.065);
     }
     .actions {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     button {
-      border: 0;
-      border-radius: 10px;
-      padding: 11px 16px;
-      font-size: 16px;
-      font-weight: 600;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
       cursor: pointer;
+      transition: opacity 0.14s ease;
+    }
+    button:hover {
+      opacity: 0.88;
     }
     .primary {
-      background: var(--accent);
-      color: #05140f;
+      background: #f0f1f3;
+      color: var(--darkText);
+      border: none;
     }
     .ghost {
-      background: #171717;
-      color: #f0f0f0;
-      border: 1px solid #363636;
+      border: none;
+      background: rgba(255, 255, 255, 0.06);
+      color: #d4d8df;
     }
     .urlBox {
-      border: 1px solid #3c3c3c;
-      background: #050505;
-      border-radius: 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      padding: 12px;
-      font-size: 14px;
+      border: none;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
       word-break: break-all;
-      color: #ebebeb;
-      margin: 10px 0 0;
-      min-height: 48px;
+      color: #cdd3de;
+      margin: 12px 0 0;
+      min-height: 46px;
+    }
+    .previewShell {
+      width: 100%;
+      max-width: 394px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 6px;
     }
     .note {
-      border: 1px solid #58411f;
-      background: #1b1407;
-      color: var(--warn);
-      border-radius: 10px;
-      padding: 12px;
+      border: none;
+      background: #15110f;
+      color: #cfb79f;
+      border-radius: 6px;
+      padding: 10px;
       margin-top: 12px;
+      font-size: 13px;
+    }
+    .dateQuick {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .dateQuickBtn {
+      border: none;
+      background: rgba(255, 255, 255, 0.05);
+      color: #c8ced8;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    .datePicker {
+      position: fixed;
+      z-index: 100;
+      width: 282px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: #0b0d11;
+      padding: 10px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+    .datePicker[hidden] {
+      display: none;
+    }
+    .dpHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .dpLabel {
+      font-size: 13px;
+      color: #d4d9e2;
+      min-width: 120px;
+      text-align: center;
+    }
+    .dpNav {
+      border: none;
+      background: rgba(255, 255, 255, 0.06);
+      color: #d2d8e3;
+      border-radius: 6px;
+      width: 30px;
+      height: 28px;
+      padding: 0;
+      line-height: 1;
       font-size: 15px;
     }
+    .dpWeek,
+    .dpGrid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 4px;
+    }
+    .dpWeek {
+      margin-bottom: 4px;
+    }
+    .dpWeek span {
+      text-align: center;
+      font-size: 11px;
+      color: #8f97a8;
+      padding: 3px 0;
+    }
+    .dpDay {
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #c7ceda;
+      height: 30px;
+      padding: 0;
+      font-size: 13px;
+    }
+    .dpDay:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .dpDay.muted {
+      color: #596172;
+    }
+    .dpDay.today {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+    }
+    .dpDay.selected {
+      background: #f0f2f5;
+      color: #0f1217;
+      font-weight: 700;
+    }
+    .dpFoot {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .dpText {
+      border: none;
+      background: transparent;
+      color: #b8c0cd;
+      font-size: 12px;
+      padding: 4px 2px;
+      border-radius: 4px;
+    }
+    .dpText:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
     .steps {
-      color: #c8d4ea;
+      color: #bfc5cf;
       margin: 0;
       padding-left: 18px;
-      font-size: 18px;
+      font-size: clamp(14px, 1.05vw, 18px);
     }
-    .steps li + li { margin-top: 8px; }
+    .steps li + li {
+      margin-top: 8px;
+    }
     img {
       width: 100%;
-      max-width: 380px;
-      border-radius: 18px;
-      border: 1px solid #2e2e2e;
-      background: #050505;
+      max-width: 100%;
+      border-radius: 16px;
+      border: none;
+      background: #040607;
       display: block;
-      margin-top: 14px;
       aspect-ratio: 9/19.5;
       object-fit: cover;
     }
-    .footer {
-      color: #8d9db8;
-      margin-top: 14px;
-      font-size: 14px;
+    .base {
+      color: var(--soft);
+      margin-top: 12px;
+      font-size: 12px;
     }
-    @media (max-width: 740px) {
-      .grid { grid-template-columns: 1fr; }
-      input, select { font-size: 18px; }
+    code {
+      color: #d6dbe4;
+      font-family: inherit;
+    }
+    @media (max-width: 900px) {
+      .wrap {
+        padding: 52px 16px 72px;
+      }
+      .tagline {
+        margin-top: 10px;
+      }
+      .sectionTitle {
+        font-size: clamp(24px, 7vw, 34px);
+      }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .card {
+        padding-top: 14px;
+      }
+      input, select {
+        font-size: 14px;
+      }
+      .steps {
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Installation Steps</h1>
-    <p class="lead">Define your countdown wallpaper, then use one URL in iOS Shortcuts Automation to update your lock screen every day.</p>
+    <header class="hero">
+      <h1>goal-wallpaper.dev</h1>
+      <p class="tagline">Breaking out of setup pain, building one clean wallpaper flow.</p>
+    </header>
 
-    <section class="panel">
-      <div class="step"><span class="badge">1</span><h2>Define Your Wallpaper</h2></div>
+    <section class="intro">
+      <p>Generate one PNG URL for iOS Shortcuts and let your lock screen update itself every day based on your date range.</p>
+      <div class="metaLine">
+        <span>iOS</span>
+        <span class="slash">//</span>
+        <span>Shortcuts</span>
+      </div>
+    </section>
+
+    <p class="jump">Setup -></p>
+
+    <h2 class="sectionTitle">Wallpaper</h2>
+    <section class="card">
       <form id="wallpaperForm" class="grid" autocomplete="off">
         <div class="full">
           <label for="goal">Goal</label>
@@ -480,11 +669,16 @@ function renderPage(origin: string): string {
         </div>
         <div>
           <label for="start">Start Date</label>
-          <input id="start" name="start" type="date" />
+          <input id="start" name="start" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" autocomplete="off" />
         </div>
         <div>
           <label for="deadline">Deadline</label>
-          <input id="deadline" name="deadline" type="date" />
+          <input id="deadline" name="deadline" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" autocomplete="off" />
+        </div>
+        <div class="dateQuick full">
+          <button type="button" class="dateQuickBtn" data-date-action="start-today">Start: today</button>
+          <button type="button" class="dateQuickBtn" data-date-action="deadline-30">Deadline: +30d</button>
+          <button type="button" class="dateQuickBtn" data-date-action="deadline-90">Deadline: +90d</button>
         </div>
         <div class="full">
           <label for="model">iPhone Model</label>
@@ -501,27 +695,45 @@ function renderPage(origin: string): string {
       </form>
 
       <div id="urlOutput" class="urlBox" aria-live="polite"></div>
-      <img id="preview" alt="Wallpaper preview" />
+      <div class="previewShell">
+        <img id="preview" alt="Wallpaper preview" />
+      </div>
     </section>
 
-    <section class="panel">
-      <div class="step"><span class="badge">2</span><h2>Create Automation</h2></div>
+    <h2 class="sectionTitle">Automation</h2>
+    <section class="card">
       <ol class="steps">
-        <li>Open Shortcuts → Automation → New Automation → Time of Day (daily)</li>
+        <li>Open Shortcuts -> Automation -> New Automation -> Time of Day (daily)</li>
         <li>Select <strong>Run Immediately</strong></li>
         <li>Create a new shortcut for that automation</li>
       </ol>
     </section>
 
-    <section class="panel">
-      <div class="step"><span class="badge">3</span><h2>Create Shortcut</h2></div>
+    <h2 class="sectionTitle">Shortcut</h2>
+    <section class="card">
       <ol class="steps">
         <li>Add action: <strong>Get Contents of URL</strong> and paste the generated URL</li>
         <li>Add action: <strong>Set Wallpaper Photo</strong> and target <strong>Lock Screen</strong></li>
       </ol>
-      <div class="note"><strong>Important:</strong> In “Set Wallpaper Photo”, disable both “Show Preview” and “Crop to Subject” to avoid daily confirmation popups.</div>
-      <p class="footer">URL base: ${origin}/goal.png</p>
+      <div class="note"><strong>Important:</strong> In "Set Wallpaper Photo", disable both "Show Preview" and "Crop to Subject" so the automation runs without confirmation popups.</div>
+      <p class="base">Base URL: <code>${origin}/goal.png</code></p>
     </section>
+  </div>
+
+  <div id="datePicker" class="datePicker" hidden>
+    <div class="dpHead">
+      <button type="button" id="dpPrev" class="dpNav" aria-label="Previous month"><</button>
+      <div id="dpLabel" class="dpLabel"></div>
+      <button type="button" id="dpNext" class="dpNav" aria-label="Next month">></button>
+    </div>
+    <div class="dpWeek">
+      <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+    </div>
+    <div id="dpGrid" class="dpGrid"></div>
+    <div class="dpFoot">
+      <button type="button" id="dpToday" class="dpText">Today</button>
+      <button type="button" id="dpClear" class="dpText">Clear</button>
+    </div>
   </div>
 
   <script>
@@ -529,16 +741,176 @@ function renderPage(origin: string): string {
     const urlOutput = document.getElementById('urlOutput');
     const preview = document.getElementById('preview');
     const copyButton = document.getElementById('copyUrl');
+    const startInput = document.getElementById('start');
+    const deadlineInput = document.getElementById('deadline');
+    const datePicker = document.getElementById('datePicker');
+    const dpLabel = document.getElementById('dpLabel');
+    const dpGrid = document.getElementById('dpGrid');
+    const dpPrev = document.getElementById('dpPrev');
+    const dpNext = document.getElementById('dpNext');
+    const dpToday = document.getElementById('dpToday');
+    const dpClear = document.getElementById('dpClear');
+    const quickDateButtons = document.querySelectorAll('[data-date-action]');
+
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    let pickerInput = null;
+    let pickerMonth = 0;
+    let pickerYear = 0;
+
+    function toIsoLocal(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function parseIsoLocal(value) {
+      const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(value || '').trim());
+      if (!match) return null;
+
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      const date = new Date(year, month - 1, day);
+
+      if (
+        Number.isNaN(date.getTime()) ||
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+      ) {
+        return null;
+      }
+
+      return date;
+    }
+
+    function addDaysLocal(date, amount) {
+      const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      copy.setDate(copy.getDate() + amount);
+      return copy;
+    }
+
+    function isSameDate(a, b) {
+      return (
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate()
+      );
+    }
 
     const now = new Date();
-    const isoToday = now.toISOString().slice(0, 10);
-    const future = new Date(now.getTime() + 119 * 24 * 60 * 60 * 1000);
-    const isoFuture = future.toISOString().slice(0, 10);
+    const localToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isoToday = toIsoLocal(localToday);
+    const isoFuture = toIsoLocal(addDaysLocal(localToday, 119));
 
-    document.getElementById('goal').value = '43';
-    document.getElementById('start').value = isoToday;
-    document.getElementById('deadline').value = isoFuture;
+    document.getElementById('goal').value = '43 sessions';
+    startInput.value = isoToday;
+    deadlineInput.value = isoFuture;
     document.getElementById('tz').value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    function positionPicker() {
+      if (!pickerInput || datePicker.hidden) return;
+
+      const rect = pickerInput.getBoundingClientRect();
+      const pickerWidth = 282;
+      const pagePadding = 8;
+      let left = rect.left;
+      let top = rect.bottom + 8;
+
+      if (left + pickerWidth > window.innerWidth - pagePadding) {
+        left = window.innerWidth - pickerWidth - pagePadding;
+      }
+      if (left < pagePadding) {
+        left = pagePadding;
+      }
+
+      const pickerHeight = datePicker.offsetHeight || 330;
+      if (top + pickerHeight > window.innerHeight - pagePadding) {
+        top = Math.max(pagePadding, rect.top - pickerHeight - 8);
+      }
+
+      datePicker.style.left = Math.round(left) + 'px';
+      datePicker.style.top = Math.round(top) + 'px';
+    }
+
+    function renderPicker() {
+      if (!pickerInput) return;
+
+      dpLabel.textContent = monthNames[pickerMonth] + ' ' + pickerYear;
+      dpGrid.innerHTML = '';
+
+      const selectedDate = parseIsoLocal(pickerInput.value);
+      const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
+      const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+      const daysInPrevMonth = new Date(pickerYear, pickerMonth, 0).getDate();
+
+      for (let i = 0; i < 42; i += 1) {
+        const dayOffset = i - firstDay + 1;
+        let cellDate = null;
+        let muted = false;
+
+        if (dayOffset < 1) {
+          cellDate = new Date(pickerYear, pickerMonth - 1, daysInPrevMonth + dayOffset);
+          muted = true;
+        } else if (dayOffset > daysInMonth) {
+          cellDate = new Date(pickerYear, pickerMonth + 1, dayOffset - daysInMonth);
+          muted = true;
+        } else {
+          cellDate = new Date(pickerYear, pickerMonth, dayOffset);
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'dpDay';
+        if (muted) {
+          button.classList.add('muted');
+        }
+        if (isSameDate(cellDate, localToday)) {
+          button.classList.add('today');
+        }
+        if (selectedDate && isSameDate(cellDate, selectedDate)) {
+          button.classList.add('selected');
+        }
+        button.textContent = String(cellDate.getDate());
+        button.addEventListener('click', () => {
+          pickerInput.value = toIsoLocal(cellDate);
+          closePicker();
+          refresh();
+        });
+
+        dpGrid.appendChild(button);
+      }
+    }
+
+    function openPicker(input) {
+      pickerInput = input;
+      const baseDate = parseIsoLocal(input.value) || localToday;
+      pickerMonth = baseDate.getMonth();
+      pickerYear = baseDate.getFullYear();
+      datePicker.hidden = false;
+      renderPicker();
+      positionPicker();
+    }
+
+    function closePicker() {
+      datePicker.hidden = true;
+      pickerInput = null;
+    }
 
     function buildUrl() {
       const formData = new FormData(form);
@@ -556,6 +928,96 @@ function renderPage(origin: string): string {
       urlOutput.textContent = url;
       preview.src = url + '&preview=1&_preview=' + Date.now();
     }
+
+    [startInput, deadlineInput].forEach((input) => {
+      input.addEventListener('focus', () => openPicker(input));
+      input.addEventListener('click', () => openPicker(input));
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          openPicker(input);
+        }
+        if (event.key === 'Escape') {
+          closePicker();
+        }
+      });
+      input.addEventListener('blur', () => {
+        const parsed = parseIsoLocal(input.value);
+        if (parsed) {
+          input.value = toIsoLocal(parsed);
+          refresh();
+        }
+      });
+    });
+
+    dpPrev.addEventListener('click', () => {
+      pickerMonth -= 1;
+      if (pickerMonth < 0) {
+        pickerMonth = 11;
+        pickerYear -= 1;
+      }
+      renderPicker();
+    });
+
+    dpNext.addEventListener('click', () => {
+      pickerMonth += 1;
+      if (pickerMonth > 11) {
+        pickerMonth = 0;
+        pickerYear += 1;
+      }
+      renderPicker();
+    });
+
+    dpToday.addEventListener('click', () => {
+      if (!pickerInput) return;
+      pickerInput.value = toIsoLocal(localToday);
+      closePicker();
+      refresh();
+    });
+
+    dpClear.addEventListener('click', () => {
+      if (!pickerInput) return;
+      pickerInput.value = '';
+      closePicker();
+      refresh();
+    });
+
+    quickDateButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.getAttribute('data-date-action');
+        const startDate = parseIsoLocal(startInput.value) || localToday;
+
+        if (action === 'start-today') {
+          startInput.value = toIsoLocal(localToday);
+        } else if (action === 'deadline-30') {
+          deadlineInput.value = toIsoLocal(addDaysLocal(startDate, 30));
+        } else if (action === 'deadline-90') {
+          deadlineInput.value = toIsoLocal(addDaysLocal(startDate, 90));
+        }
+
+        refresh();
+      });
+    });
+
+    document.addEventListener('mousedown', (event) => {
+      if (datePicker.hidden) return;
+
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+
+      if (
+        datePicker.contains(target) ||
+        startInput.contains(target) ||
+        deadlineInput.contains(target)
+      ) {
+        return;
+      }
+
+      closePicker();
+    });
+
+    window.addEventListener('resize', positionPicker);
+    window.addEventListener('scroll', positionPicker, true);
 
     form.addEventListener('submit', (event) => {
       event.preventDefault();

@@ -1,4 +1,4 @@
-import { handleRequest } from '../src/server';
+import { handleRequest } from '../src/server.js';
 
 function toWebHeaders(nodeHeaders: Record<string, string | string[] | undefined>): Headers {
   const headers = new Headers();

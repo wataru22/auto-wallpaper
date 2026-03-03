@@ -20,7 +20,7 @@ const DEFAULT_MODEL_KEY = 'iphone15';
 const MAX_DOTS = 5000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const FONT_FILES = ['Inter.ttf'] as const;
+const FONT_FILES = ['Inter.ttf', 'RobotoMono.ttf'] as const;
 
 let cachedFontFiles: string[] | null = null;
 
@@ -278,10 +278,10 @@ function generateWallpaperSvg(params: {
     <rect x="0" y="0" width="${width}" height="${height}" fill="#050608" />
     <rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="none" stroke="#111319" />
 
-    <text x="${contentX}" y="${goalY}" fill="#f5f5f6" font-size="${goalFontSize}" font-weight="700" font-family="Inter, ui-monospace, Menlo, monospace">${escapedGoal}</text>
-    <text x="${contentX}" y="${rangeY}" fill="#a3abba" font-size="${rangeFontSize}" font-weight="500" font-family="ui-monospace, Menlo, monospace">${startText} -> ${deadlineText}</text>
+    <text x="${contentX}" y="${goalY}" fill="#f5f5f6" font-size="${goalFontSize}" font-weight="700" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${escapedGoal}</text>
+    <text x="${contentX}" y="${rangeY}" fill="#a3abba" font-size="${rangeFontSize}" font-weight="500" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${startText} -> ${deadlineText}</text>
 
-    <text x="${contentX}" y="${statusY}" fill="#dde1e8" font-size="${statusFontSize}" font-weight="600" font-family="ui-monospace, Menlo, monospace">${escapeXml(statusLabel)}</text>
+    <text x="${contentX}" y="${statusY}" fill="#dde1e8" font-size="${statusFontSize}" font-weight="600" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${escapeXml(statusLabel)}</text>
 
     <rect x="${contentX}" y="${barY}" width="${contentWidth}" height="${barHeight}" rx="${barRadius}" fill="#262a32" />
     <rect x="${contentX}" y="${barY}" width="${progressWidth}" height="${barHeight}" rx="${barRadius}" fill="#d7dce5" />
@@ -290,10 +290,10 @@ function generateWallpaperSvg(params: {
       ${dots.join('\n')}
     </g>
 
-    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="ui-monospace, Menlo, monospace">${elapsed}/${totalDays} days complete // TZ ${escapeXml(tz)}</text>
+    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${elapsed}/${totalDays} days complete // TZ ${escapeXml(tz)}</text>
     ${
       truncated
-        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="ui-monospace, Menlo, monospace">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
+        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="Roboto Mono, ui-monospace, Menlo, monospace">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
         : ''
     }
   </svg>
@@ -1060,7 +1060,7 @@ function imageResponse(
     background: 'rgba(0,0,0,1)',
     font: {
       loadSystemFonts: true,
-      defaultFontFamily: 'Inter',
+      defaultFontFamily: 'Roboto Mono',
       fontFiles,
     },
   });

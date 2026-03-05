@@ -1,62 +1,100 @@
-import { Resvg } from '@resvg/resvg-js';
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { Resvg } from '@resvg/resvg-js'
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 type PhoneModel = {
-  label: string;
-  width: number;
-  height: number;
-};
+  label: string
+  width: number
+  height: number
+}
 
 const PHONE_MODELS: Record<string, PhoneModel> = {
   iphone15: { label: 'iPhone 15 / 15 Pro / 16', width: 1179, height: 2556 },
-  iphone15proMax: { label: 'iPhone 15 Pro Max / 16 Pro Max', width: 1290, height: 2796 },
+  iphone15proMax: {
+    label: 'iPhone 15 Pro Max / 16 Pro Max',
+    width: 1290,
+    height: 2796,
+  },
   iphone14: { label: 'iPhone 14 / 13 / 12', width: 1170, height: 2532 },
-  iphone14plus: { label: 'iPhone 14 Plus / 15 Plus', width: 1284, height: 2778 },
+  iphone14plus: {
+    label: 'iPhone 14 Plus / 15 Plus',
+    width: 1284,
+    height: 2778,
+  },
   iphoneSE: { label: 'iPhone SE (3rd gen)', width: 750, height: 1334 },
-};
+}
 
-const DEFAULT_MODEL_KEY = 'iphone15';
-const MAX_DOTS = 5000;
-const DAY_MS = 24 * 60 * 60 * 1000;
-const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const FONT_FILES = ['Inter.ttf', 'RobotoMono.ttf'] as const;
+const DEFAULT_MODEL_KEY = 'iphone15'
+const MAX_DOTS = 5000
+const DAY_MS = 24 * 60 * 60 * 1000
+const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
+const FONT_FILES = ['Inter.ttf', 'RobotoMono.ttf'] as const
+const FALLBACK_TIME_ZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Toronto',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Phoenix',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Asia/Singapore',
+  'Asia/Hong_Kong',
+  'Australia/Sydney',
+  'Australia/Melbourne',
+] as const
+const TIME_ZONES = (() => {
+  const supported =
+    typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('timeZone')
+      : [...FALLBACK_TIME_ZONES]
 
-let cachedFontFiles: string[] | null = null;
+  return supported.includes('UTC') ? supported : ['UTC', ...supported]
+})()
+
+let cachedFontFiles: string[] | null = null
 
 function loadFontFiles(): string[] {
   if (cachedFontFiles) {
-    return cachedFontFiles;
+    return cachedFontFiles
   }
 
-  const files: string[] = [];
+  const files: string[] = []
 
   for (const fileName of FONT_FILES) {
-    const filePath = fileURLToPath(new URL(`../fonts/${fileName}`, import.meta.url));
+    const filePath = fileURLToPath(
+      new URL(`../fonts/${fileName}`, import.meta.url),
+    )
     if (existsSync(filePath)) {
-      files.push(filePath);
+      files.push(filePath)
     }
   }
 
-  cachedFontFiles = files;
-  return files;
+  cachedFontFiles = files
+  return files
 }
 
 function clamp(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
+  if (value < min) return min
+  if (value > max) return max
+  return value
 }
 
 function parseIsoDate(input: string | null): Date | null {
-  if (!input) return null;
-  const match = DATE_PATTERN.exec(input.trim());
-  if (!match) return null;
+  if (!input) return null
+  const match = DATE_PATTERN.exec(input.trim())
+  if (!match) return null
 
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
 
   if (
     Number.isNaN(date.getTime()) ||
@@ -64,40 +102,40 @@ function parseIsoDate(input: string | null): Date | null {
     date.getUTCMonth() !== month - 1 ||
     date.getUTCDate() !== day
   ) {
-    return null;
+    return null
   }
 
-  return date;
+  return date
 }
 
 function dateToIso(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10)
 }
 
 function addDays(date: Date, amount: number): Date {
-  return new Date(date.getTime() + amount * DAY_MS);
+  return new Date(date.getTime() + amount * DAY_MS)
 }
 
 function daysInclusive(start: Date, end: Date): number {
-  return Math.floor((end.getTime() - start.getTime()) / DAY_MS) + 1;
+  return Math.floor((end.getTime() - start.getTime()) / DAY_MS) + 1
 }
 
 function sanitizeGoal(goal: string | null): string {
-  const value = (goal ?? '').trim();
-  if (!value) return 'My Goal';
-  return value.slice(0, 42);
+  const value = (goal ?? '').trim()
+  if (!value) return ''
+  return value.slice(0, 42)
 }
 
 function validateTimeZone(tz: string | null): string {
-  const fallback = 'UTC';
-  const value = (tz ?? '').trim();
-  if (!value) return fallback;
+  const fallback = 'UTC'
+  const value = (tz ?? '').trim()
+  if (!value) return fallback
 
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date());
-    return value;
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date())
+    return value
   } catch {
-    return fallback;
+    return fallback
   }
 }
 
@@ -107,38 +145,42 @@ function todayInTimeZone(tz: string): Date {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  });
+  })
 
-  const parts = formatter.formatToParts(new Date());
-  const year = Number(parts.find((part) => part.type === 'year')?.value ?? '1970');
-  const month = Number(parts.find((part) => part.type === 'month')?.value ?? '01');
-  const day = Number(parts.find((part) => part.type === 'day')?.value ?? '01');
+  const parts = formatter.formatToParts(new Date())
+  const year = Number(
+    parts.find((part) => part.type === 'year')?.value ?? '1970',
+  )
+  const month = Number(
+    parts.find((part) => part.type === 'month')?.value ?? '01',
+  )
+  const day = Number(parts.find((part) => part.type === 'day')?.value ?? '01')
 
-  return new Date(Date.UTC(year, month - 1, day));
+  return new Date(Date.UTC(year, month - 1, day))
 }
 
 function getDateParam(url: URL, key: string, fallback: Date): Date {
-  const direct = parseIsoDate(url.searchParams.get(key));
-  if (direct) return direct;
+  const direct = parseIsoDate(url.searchParams.get(key))
+  if (direct) return direct
 
-  const year = url.searchParams.get(`${key}Year`);
-  const month = url.searchParams.get(`${key}Month`);
-  const day = url.searchParams.get(`${key}Day`);
+  const year = url.searchParams.get(`${key}Year`)
+  const month = url.searchParams.get(`${key}Month`)
+  const day = url.searchParams.get(`${key}Day`)
   if (year && month && day) {
-    const combined = `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    const byParts = parseIsoDate(combined);
-    if (byParts) return byParts;
+    const combined = `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    const byParts = parseIsoDate(combined)
+    if (byParts) return byParts
   }
 
-  return fallback;
+  return fallback
 }
 
 function modelFromKey(key: string | null): { key: string; spec: PhoneModel } {
   if (key && PHONE_MODELS[key]) {
-    return { key, spec: PHONE_MODELS[key] };
+    return { key, spec: PHONE_MODELS[key] }
   }
 
-  return { key: DEFAULT_MODEL_KEY, spec: PHONE_MODELS[DEFAULT_MODEL_KEY] };
+  return { key: DEFAULT_MODEL_KEY, spec: PHONE_MODELS[DEFAULT_MODEL_KEY] }
 }
 
 function escapeXml(value: string): string {
@@ -147,7 +189,7 @@ function escapeXml(value: string): string {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
+    .replaceAll("'", '&apos;')
 }
 
 function formatFriendlyDate(date: Date): string {
@@ -156,123 +198,142 @@ function formatFriendlyDate(date: Date): string {
     month: 'short',
     day: 'numeric',
     timeZone: 'UTC',
-  });
-  return formatter.format(date);
+  })
+  return formatter.format(date)
 }
 
-function calculateDotLayout(totalDots: number, areaWidth: number, areaHeight: number) {
-  const gap = clamp(Math.round(Math.min(areaWidth, areaHeight) * 0.007), 3, 8);
-  const minDot = 3;
-  const maxDot = 18;
+function calculateDotLayout(
+  totalDots: number,
+  areaWidth: number,
+  areaHeight: number,
+) {
+  const gap = clamp(Math.round(Math.min(areaWidth, areaHeight) * 0.007), 3, 8)
+  const minDot = 3
+  const maxDot = 18
 
-  const ratio = areaWidth / Math.max(areaHeight, 1);
-  const startingColumns = clamp(Math.ceil(Math.sqrt(totalDots * ratio)), 8, 220);
+  const ratio = areaWidth / Math.max(areaHeight, 1)
+  const startingColumns = clamp(Math.ceil(Math.sqrt(totalDots * ratio)), 8, 220)
 
   let best = {
     columns: startingColumns,
     rows: Math.ceil(totalDots / startingColumns),
     dot: minDot,
     gap,
-  };
+  }
 
   for (let columns = startingColumns; columns <= 220; columns += 1) {
-    const rows = Math.ceil(totalDots / columns);
-    const dotByWidth = (areaWidth - (columns - 1) * gap) / columns;
-    const dotByHeight = (areaHeight - (rows - 1) * gap) / rows;
-    const dot = Math.min(dotByWidth, dotByHeight, maxDot);
+    const rows = Math.ceil(totalDots / columns)
+    const dotByWidth = (areaWidth - (columns - 1) * gap) / columns
+    const dotByHeight = (areaHeight - (rows - 1) * gap) / rows
+    const dot = Math.min(dotByWidth, dotByHeight, maxDot)
 
     if (dot > best.dot) {
-      best = { columns, rows, dot, gap };
+      best = { columns, rows, dot, gap }
     }
 
     if (dot >= minDot && rows * (dot + gap) - gap <= areaHeight) {
-      return { columns, rows, dot, gap };
+      return { columns, rows, dot, gap }
     }
   }
 
-  return best;
+  return best
 }
 
 function generateWallpaperSvg(params: {
-  goal: string;
-  start: Date;
-  deadline: Date;
-  tz: string;
-  width: number;
-  height: number;
+  goal: string
+  start: Date
+  deadline: Date
+  tz: string
+  width: number
+  height: number
 }) {
-  const { goal, start, deadline, tz, width, height } = params;
+  const { goal, start, deadline, tz, width, height } = params
 
-  const today = todayInTimeZone(tz);
-  const totalDays = Math.max(1, daysInclusive(start, deadline));
-  const elapsed = clamp(daysInclusive(start, today), 0, totalDays);
-  const remaining = totalDays - elapsed;
-  const progress = elapsed / totalDays;
-  const truncated = totalDays > MAX_DOTS;
-  const dotsToRender = Math.min(totalDays, MAX_DOTS);
-  const todayIndex = clamp(daysInclusive(start, today) - 1, 0, totalDays - 1);
-  const panelX = Math.round(width * 0.07);
-  const panelWidth = width - panelX * 2;
-  const verticalNudge = clamp(Math.round(height * 0.06), 18, 220);
-  const panelY = Math.round(height * 0.16) + verticalNudge;
-  const panelHeight = Math.round(height * 0.68);
-  const panelRadius = clamp(Math.round(width * 0.023), 16, 34);
+  const today = todayInTimeZone(tz)
+  const totalDays = Math.max(1, daysInclusive(start, deadline))
+  const elapsed = clamp(daysInclusive(start, today), 0, totalDays)
+  const remaining = totalDays - elapsed
+  const progress = elapsed / totalDays
+  const truncated = totalDays > MAX_DOTS
+  const dotsToRender = Math.min(totalDays, MAX_DOTS)
+  const todayIndex = clamp(daysInclusive(start, today) - 1, 0, totalDays - 1)
+  const panelX = Math.round(width * 0.07)
+  const panelWidth = width - panelX * 2
+  const verticalNudge = clamp(Math.round(height * 0.06), 18, 220)
+  const panelY = Math.round(height * 0.16) + verticalNudge
+  const panelHeight = Math.round(height * 0.68)
+  const panelRadius = clamp(Math.round(width * 0.023), 16, 34)
 
-  const insetX = clamp(Math.round(panelWidth * 0.06), 24, 74);
-  const contentX = panelX + insetX;
-  const contentWidth = panelWidth - insetX * 2;
+  const insetX = clamp(Math.round(panelWidth * 0.06), 24, 74)
+  const contentX = panelX + insetX
+  const contentWidth = panelWidth - insetX * 2
 
-  const baseGoalFontSize = clamp(Math.round(width * 0.066), 32, 78);
-  const goalScale = clamp(1 - Math.max(goal.length - 14, 0) * 0.02, 0.56, 1);
-  const goalFontSize = Math.round(baseGoalFontSize * goalScale);
-  const rangeFontSize = clamp(Math.round(width * 0.019), 13, 24);
-  const statusFontSize = clamp(Math.round(width * 0.029), 20, 40);
-  const metaFontSize = clamp(Math.round(width * 0.016), 12, 18);
-  const barHeight = clamp(Math.round(width * 0.0058), 5, 10);
-  const barRadius = Math.round(barHeight / 2);
+  const baseGoalFontSize = clamp(Math.round(width * 0.066), 32, 78)
+  const goalScale = clamp(1 - Math.max(goal.length - 14, 0) * 0.02, 0.56, 1)
+  const goalFontSize = Math.round(baseGoalFontSize * goalScale)
+  const rangeFontSize = clamp(Math.round(width * 0.019), 13, 24)
+  const statusFontSize = clamp(Math.round(width * 0.029), 20, 40)
+  const metaFontSize = clamp(Math.round(width * 0.016), 12, 18)
+  const barHeight = clamp(Math.round(width * 0.0058), 5, 10)
+  const barRadius = Math.round(barHeight / 2)
 
-  const topPadding = clamp(Math.round(panelHeight * 0.22), 160, 460);
-  const bottomPadding = clamp(Math.round(panelHeight * 0.08), 30, 68);
+  const topPadding = clamp(Math.round(panelHeight * 0.22), 160, 460)
+  const bottomPadding = clamp(Math.round(panelHeight * 0.08), 30, 68)
 
-  const goalY = panelY + topPadding + goalFontSize;
-  const rangeY = goalY + 18 + rangeFontSize;
-  const statusY = rangeY + 22 + statusFontSize;
-  const barY = statusY + 15;
-  const gridTop = barY + barHeight + 26;
+  const goalY = panelY + topPadding + goalFontSize
+  const rangeY = goalY + 18 + rangeFontSize
+  const statusY = rangeY + 22 + statusFontSize
+  const barY = statusY + 15
+  const gridTop = barY + barHeight + 26
 
-  const footerReserve = truncated ? metaFontSize * 2 + 22 : metaFontSize + 12;
-  const maxGridBottom = panelY + panelHeight - bottomPadding - footerReserve;
-  const dotAreaHeight = Math.max(68, maxGridBottom - gridTop);
+  const footerReserve = truncated ? metaFontSize * 2 + 22 : metaFontSize + 12
+  const maxGridBottom = panelY + panelHeight - bottomPadding - footerReserve
+  const dotAreaHeight = Math.max(68, maxGridBottom - gridTop)
 
-  const wideDotAreaHeight = Math.max(56, Math.round(dotAreaHeight * 0.58));
-  const layout = calculateDotLayout(dotsToRender, contentWidth, wideDotAreaHeight);
-  const gridHeight = layout.rows * layout.dot + (layout.rows - 1) * layout.gap;
-  const footerY = gridTop + gridHeight + 16 + metaFontSize;
-  const truncationY = footerY - metaFontSize - 11;
+  const wideDotAreaHeight = Math.max(56, Math.round(dotAreaHeight * 0.58))
+  const layout = calculateDotLayout(
+    dotsToRender,
+    contentWidth,
+    wideDotAreaHeight,
+  )
+  const gridHeight = layout.rows * layout.dot + (layout.rows - 1) * layout.gap
+  const footerY = gridTop + gridHeight + 16 + metaFontSize
+  const truncationY = footerY - metaFontSize - 11
 
-  const dots: string[] = [];
-  const doneColor = '#e5e7eb';
-  const currentColor = '#ff8a00';
-  const pendingColor = '#2f333d';
-  const dotRadius = Math.max(1.5, layout.dot * 0.43);
+  const dots: string[] = []
+  const doneColor = '#e5e7eb'
+  const currentColor = '#ff8a00'
+  const pendingColor = '#2f333d'
+  const dotRadius = Math.max(1.5, layout.dot * 0.43)
 
   for (let i = 0; i < dotsToRender; i += 1) {
-    const row = Math.floor(i / layout.columns);
-    const col = i % layout.columns;
-    const cx = contentX + col * (layout.dot + layout.gap) + layout.dot / 2;
-    const cy = gridTop + row * (layout.dot + layout.gap) + layout.dot / 2;
-    const fill = i < todayIndex ? doneColor : i === todayIndex ? currentColor : pendingColor;
-    dots.push(`<circle cx="${cx}" cy="${cy}" r="${dotRadius}" fill="${fill}" />`);
+    const row = Math.floor(i / layout.columns)
+    const col = i % layout.columns
+    const cx = contentX + col * (layout.dot + layout.gap) + layout.dot / 2
+    const cy = gridTop + row * (layout.dot + layout.gap) + layout.dot / 2
+    const fill =
+      i < todayIndex
+        ? doneColor
+        : i === todayIndex
+          ? currentColor
+          : pendingColor
+    dots.push(
+      `<circle cx="${cx}" cy="${cy}" r="${dotRadius}" fill="${fill}" />`,
+    )
   }
 
-  const startText = formatFriendlyDate(start);
-  const deadlineText = formatFriendlyDate(deadline);
-  const escapedGoal = escapeXml(goal);
+  const startText = formatFriendlyDate(start)
+  const deadlineText = formatFriendlyDate(deadline)
+  const escapedGoal = escapeXml(goal)
 
   const statusRight =
-    remaining > 0 ? `${remaining} days left` : remaining === 0 ? 'deadline is today' : 'goal complete';
-  const statusLabel = `${Math.round(progress * 100)}% // ${statusRight}`;
-  const progressWidth = Math.max(0, Math.round(contentWidth * progress));
+    remaining > 0
+      ? `${remaining} days left`
+      : remaining === 0
+        ? 'deadline is today'
+        : 'goal complete'
+  const statusLabel = `${Math.round(progress * 100)}% // ${statusRight}`
+  const progressWidth = Math.max(0, Math.round(contentWidth * progress))
 
   return `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -298,20 +359,23 @@ function generateWallpaperSvg(params: {
         : ''
     }
   </svg>
-  `;
+  `
 }
 
-function renderPage(origin: string): string {
+function renderPage(): string {
   const modelOptions = Object.entries(PHONE_MODELS)
     .map(([key, model]) => `<option value="${key}">${model.label}</option>`)
-    .join('');
+    .join('')
+  const timeZoneOptions = TIME_ZONES.map(
+    (timeZone) => `<option value="${timeZone}">${timeZone}</option>`,
+  ).join('')
 
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>goal-wallpaper.dev</title>
+  <title>Auto Wallpaper</title>
   <style>
     :root {
       --bg: #040507;
@@ -379,7 +443,7 @@ function renderPage(origin: string): string {
       font-size: clamp(16px, 1.4vw, 22px);
     }
     .sectionTitle {
-      margin: 0 0 12px;
+      margin: 80px 0 12px;
       font-family: Inter, "Avenir Next", "Segoe UI", sans-serif;
       font-size: clamp(24px, 3.4vw, 40px);
       letter-spacing: -0.015em;
@@ -391,6 +455,12 @@ function renderPage(origin: string): string {
       background: transparent;
       border-radius: 0;
       padding: 18px 0 0;
+    }
+    .wallpaperLayout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.9fr);
+      gap: 22px;
+      align-items: start;
     }
     .grid {
       display: grid;
@@ -441,7 +511,7 @@ function renderPage(origin: string): string {
       font-weight: 500;
       font-family: inherit;
       cursor: pointer;
-      transition: opacity 0.14s ease;
+      transition: opacity 0.35s ease, background-color 0.35s ease, color 0.35s ease;
     }
     button:hover {
       opacity: 0.88;
@@ -455,6 +525,13 @@ function renderPage(origin: string): string {
       border: none;
       background: rgba(255, 255, 255, 0.06);
       color: #d4d8df;
+    }
+    .ghost.copySuccess {
+      background: #1f7f44;
+      color: #f2fff7;
+    }
+    .ghost.copySuccess.fadeOut {
+      opacity: 0.35;
     }
     .urlBox {
       border: none;
@@ -470,11 +547,15 @@ function renderPage(origin: string): string {
     .previewShell {
       width: 100%;
       max-width: 394px;
-      margin-top: 12px;
+      margin-top: 0;
       border: none;
       border-radius: 18px;
       background: rgba(255, 255, 255, 0.02);
       padding: 6px;
+    }
+    .previewCol {
+      display: flex;
+      justify-content: flex-end;
     }
     .note {
       border: none;
@@ -594,7 +675,9 @@ function renderPage(origin: string): string {
     .steps {
       color: #bfc5cf;
       margin: 0;
-      padding-left: 18px;
+      padding-left: 0;
+      list-style-position: inside;
+      text-align: left;
       font-size: clamp(14px, 1.05vw, 18px);
     }
     .steps li + li {
@@ -610,10 +693,17 @@ function renderPage(origin: string): string {
       aspect-ratio: 9/19.5;
       object-fit: cover;
     }
-    .base {
+    .copyright {
       color: var(--soft);
-      margin-top: 12px;
+      margin-top: 80px;
       font-size: 12px;
+    }
+    .copyright a {
+      color: #d3d8e1;
+      text-decoration: none;
+    }
+    .copyright a:hover {
+      text-decoration: underline;
     }
     code {
       color: #d6dbe4;
@@ -632,6 +722,16 @@ function renderPage(origin: string): string {
       .grid {
         grid-template-columns: 1fr;
       }
+      .wallpaperLayout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .previewCol {
+        justify-content: flex-start;
+      }
+      .previewShell {
+        margin-top: 12px;
+      }
       .card {
         padding-top: 14px;
       }
@@ -647,8 +747,7 @@ function renderPage(origin: string): string {
 <body>
   <div class="wrap">
     <header class="hero">
-      <h1>goal-wallpaper.dev</h1>
-      <p class="tagline">Breaking out of setup pain, building one clean wallpaper flow.</p>
+      <h1>Auto wallpaper</h1>
     </header>
 
     <section class="intro">
@@ -660,45 +759,49 @@ function renderPage(origin: string): string {
       </div>
     </section>
 
-    <p class="jump">Setup -></p>
-
-    <h2 class="sectionTitle">Wallpaper</h2>
+    <h2 class="sectionTitle">Wallpaper Settings</h2>
     <section class="card">
-      <form id="wallpaperForm" class="grid" autocomplete="off">
-        <div class="full">
-          <label for="goal">Goal</label>
-          <input id="goal" name="goal" placeholder="Run 43 workouts" maxlength="42" />
-        </div>
+      <div class="wallpaperLayout">
         <div>
-          <label for="start">Start Date</label>
-          <input id="start" name="start" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" autocomplete="off" />
-        </div>
-        <div>
-          <label for="deadline">Deadline</label>
-          <input id="deadline" name="deadline" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" autocomplete="off" />
-        </div>
-        <div class="dateQuick full">
-          <button type="button" class="dateQuickBtn" data-date-action="start-today">Start: today</button>
-          <button type="button" class="dateQuickBtn" data-date-action="deadline-30">Deadline: +30d</button>
-          <button type="button" class="dateQuickBtn" data-date-action="deadline-90">Deadline: +90d</button>
-        </div>
-        <div class="full">
-          <label for="model">iPhone Model</label>
-          <select id="model" name="model">${modelOptions}</select>
-        </div>
-        <div class="full">
-          <label for="tz">Timezone</label>
-          <input id="tz" name="tz" placeholder="America/Toronto" />
-        </div>
-        <div class="actions full">
-          <button type="submit" class="primary">Generate URL</button>
-          <button type="button" id="copyUrl" class="ghost">Copy URL</button>
-        </div>
-      </form>
+          <form id="wallpaperForm" class="grid" autocomplete="off">
+            <div class="full">
+              <label for="goal">Title</label>
+              <input id="goal" name="goal" placeholder="Optional" maxlength="42" />
+            </div>
+            <div>
+              <label for="start">Start Date</label>
+              <input id="start" name="start" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" autocomplete="off" />
+            </div>
+            <div>
+              <label for="deadline">Deadline</label>
+              <input id="deadline" name="deadline" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" autocomplete="off" />
+            </div>
+            <div class="dateQuick full">
+              <button type="button" class="dateQuickBtn" data-date-action="start-today">Start: today</button>
+              <button type="button" class="dateQuickBtn" data-date-action="deadline-30">Deadline: +30d</button>
+              <button type="button" class="dateQuickBtn" data-date-action="deadline-90">Deadline: +90d</button>
+            </div>
+            <div class="full">
+              <label for="model">iPhone Model</label>
+              <select id="model" name="model">${modelOptions}</select>
+            </div>
+            <div class="full">
+              <label for="tz">Timezone</label>
+              <select id="tz" name="tz">${timeZoneOptions}</select>
+            </div>
+            <div class="actions full">
+              <button type="submit" class="primary">Generate URL</button>
+              <button type="button" id="copyUrl" class="ghost">Copy URL</button>
+            </div>
+          </form>
 
-      <div id="urlOutput" class="urlBox" aria-live="polite"></div>
-      <div class="previewShell">
-        <img id="preview" alt="Wallpaper preview" />
+          <div id="urlOutput" class="urlBox" aria-live="polite"></div>
+        </div>
+        <div class="previewCol">
+          <div class="previewShell">
+            <img id="preview" alt="Wallpaper preview" />
+          </div>
+        </div>
       </div>
     </section>
 
@@ -718,7 +821,7 @@ function renderPage(origin: string): string {
         <li>Add action: <strong>Set Wallpaper Photo</strong> and target <strong>Lock Screen</strong></li>
       </ol>
       <div class="note"><strong>Important:</strong> In "Set Wallpaper Photo", disable both "Show Preview" and "Crop to Subject" so the automation runs without confirmation popups.</div>
-      <p class="base">Base URL: <code>${origin}/goal.png</code></p>
+      <p class="copyright">©2026 <a href="https://wataru.dev" target="_blank" rel="noreferrer">Wataru Watanabe</a>. All Rights Reserved.</p>
     </section>
   </div>
 
@@ -745,6 +848,7 @@ function renderPage(origin: string): string {
     const copyButton = document.getElementById('copyUrl');
     const startInput = document.getElementById('start');
     const deadlineInput = document.getElementById('deadline');
+    const tzSelect = document.getElementById('tz');
     const datePicker = document.getElementById('datePicker');
     const dpLabel = document.getElementById('dpLabel');
     const dpGrid = document.getElementById('dpGrid');
@@ -772,6 +876,8 @@ function renderPage(origin: string): string {
     let pickerInput = null;
     let pickerMonth = 0;
     let pickerYear = 0;
+    let copyFadeTimer = null;
+    let copyResetTimer = null;
 
     function toIsoLocal(date) {
       const year = date.getFullYear();
@@ -817,13 +923,21 @@ function renderPage(origin: string): string {
 
     const now = new Date();
     const localToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const isoToday = toIsoLocal(localToday);
-    const isoFuture = toIsoLocal(addDaysLocal(localToday, 119));
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const endOfYear = new Date(now.getFullYear(), 11, 31);
 
-    document.getElementById('goal').value = '43 sessions';
-    startInput.value = isoToday;
-    deadlineInput.value = isoFuture;
-    document.getElementById('tz').value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    document.getElementById('goal').value = '';
+    startInput.value = toIsoLocal(startOfYear);
+    deadlineInput.value = toIsoLocal(endOfYear);
+
+    const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const hasBrowserTimeZone = Array.from(tzSelect.options).some((option) => option.value === browserTimeZone);
+    tzSelect.value = hasBrowserTimeZone ? browserTimeZone : 'UTC';
+
+    function resetCopyButton() {
+      copyButton.classList.remove('copySuccess', 'fadeOut');
+      copyButton.textContent = 'Copy URL';
+    }
 
     function positionPicker() {
       if (!pickerInput || datePicker.hidden) return;
@@ -1031,19 +1145,42 @@ function renderPage(origin: string): string {
       if (!text) return;
       try {
         await navigator.clipboard.writeText(text);
+        if (copyFadeTimer) {
+          clearTimeout(copyFadeTimer);
+        }
+        if (copyResetTimer) {
+          clearTimeout(copyResetTimer);
+        }
+
         copyButton.textContent = 'Copied';
-        setTimeout(() => {
+        copyButton.classList.remove('fadeOut');
+        copyButton.classList.add('copySuccess');
+
+        copyFadeTimer = setTimeout(() => {
+          copyButton.classList.add('fadeOut');
+        }, 700);
+        copyResetTimer = setTimeout(() => {
+          resetCopyButton();
+        }, 1450);
+      } catch {
+        if (copyFadeTimer) {
+          clearTimeout(copyFadeTimer);
+        }
+        if (copyResetTimer) {
+          clearTimeout(copyResetTimer);
+        }
+        copyButton.classList.remove('copySuccess', 'fadeOut');
+        copyButton.textContent = 'Copy failed';
+        copyResetTimer = setTimeout(() => {
           copyButton.textContent = 'Copy URL';
         }, 1200);
-      } catch {
-        copyButton.textContent = 'Copy failed';
       }
     });
 
     refresh();
   </script>
 </body>
-</html>`;
+</html>`
 }
 
 function imageResponse(
@@ -1052,7 +1189,7 @@ function imageResponse(
   height: number,
   options?: { download?: boolean },
 ): Response {
-  const fontFiles = loadFontFiles();
+  const fontFiles = loadFontFiles()
   const renderer = new Resvg(svg, {
     fitTo: {
       mode: 'width',
@@ -1064,9 +1201,9 @@ function imageResponse(
       defaultFontFamily: 'Roboto Mono',
       fontFiles,
     },
-  });
+  })
 
-  const png = renderer.render().asPng();
+  const png = renderer.render().asPng()
 
   return new Response(new Uint8Array(png), {
     status: 200,
@@ -1074,15 +1211,18 @@ function imageResponse(
       'content-type': 'image/png',
       'cache-control': 'no-store, max-age=0',
       pragma: 'no-cache',
-      'content-disposition': options?.download === false ? 'inline' : 'attachment; filename=\"goal-wallpaper.png\"',
+      'content-disposition':
+        options?.download === false
+          ? 'inline'
+          : 'attachment; filename=\"goal-wallpaper.png\"',
     },
-  });
+  })
 }
 
 function errorImage(message: string): Response {
-  const width = 1170;
-  const height = 2532;
-  const safeMessage = escapeXml(message.slice(0, 140));
+  const width = 1170
+  const height = 2532
+  const safeMessage = escapeXml(message.slice(0, 140))
 
   const svg = `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -1090,22 +1230,24 @@ function errorImage(message: string): Response {
     <text x="80" y="240" fill="#f8fafc" font-size="58" font-family="Arial" font-weight="700">Goal Wallpaper Error</text>
     <text x="80" y="330" fill="#fcb7b7" font-size="38" font-family="Arial">${safeMessage}</text>
   </svg>
-  `;
+  `
 
-  return imageResponse(svg, width, height, { download: false });
+  return imageResponse(svg, width, height, { download: false })
 }
 
 export function handleRequest(request: Request): Response {
-  const url = new URL(request.url);
+  const url = new URL(request.url)
 
   if (url.pathname === '/health') {
-    return new Response('ok', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    return new Response('ok', {
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    })
   }
 
   if (url.pathname === '/') {
-    return new Response(renderPage(url.origin), {
+    return new Response(renderPage(), {
       headers: { 'content-type': 'text/html; charset=utf-8' },
-    });
+    })
   }
 
   if (
@@ -1113,23 +1255,28 @@ export function handleRequest(request: Request): Response {
     url.pathname === '/goal.png' ||
     url.pathname === '/wallpaper.png'
   ) {
-    const goal = sanitizeGoal(url.searchParams.get('goal'));
-    const tz = validateTimeZone(url.searchParams.get('tz') ?? url.searchParams.get('timezone'));
+    const goal = sanitizeGoal(url.searchParams.get('goal'))
+    const tz = validateTimeZone(
+      url.searchParams.get('tz') ?? url.searchParams.get('timezone'),
+    )
 
-    const baseStart = todayInTimeZone(tz);
-    const start = getDateParam(url, 'start', baseStart);
+    const today = todayInTimeZone(tz)
+    const currentYear = today.getUTCFullYear()
+    const defaultStart = new Date(Date.UTC(currentYear, 0, 1))
+    const defaultDeadline = new Date(Date.UTC(currentYear, 11, 31))
+    const start = getDateParam(url, 'start', defaultStart)
     const deadline =
       getDateParam(
         url,
         'deadline',
-        getDateParam(url, 'target', addDays(baseStart, 119)),
-      ) ?? addDays(baseStart, 119);
+        getDateParam(url, 'target', defaultDeadline),
+      ) ?? defaultDeadline
 
     if (deadline.getTime() < start.getTime()) {
-      return errorImage('Deadline must be on or after start date (YYYY-MM-DD).');
+      return errorImage('Deadline must be on or after start date (YYYY-MM-DD).')
     }
 
-    const { spec } = modelFromKey(url.searchParams.get('model'));
+    const { spec } = modelFromKey(url.searchParams.get('model'))
 
     const svg = generateWallpaperSvg({
       goal,
@@ -1138,23 +1285,23 @@ export function handleRequest(request: Request): Response {
       tz,
       width: spec.width,
       height: spec.height,
-    });
+    })
 
-    const download = url.searchParams.get('preview') !== '1';
-    return imageResponse(svg, spec.width, spec.height, { download });
+    const download = url.searchParams.get('preview') !== '1'
+    return imageResponse(svg, spec.width, spec.height, { download })
   }
 
   return new Response('Not found', {
     status: 404,
     headers: { 'content-type': 'text/plain; charset=utf-8' },
-  });
+  })
 }
 
 if (typeof Bun !== 'undefined' && import.meta.main) {
   const server = Bun.serve({
     port: Number(process.env.PORT ?? 3000),
     fetch: handleRequest,
-  });
+  })
 
-  console.log(`Goal wallpaper server running at ${server.url}`);
+  console.log(`Goal wallpaper server running at ${server.url}`)
 }

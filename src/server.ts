@@ -26,6 +26,7 @@ const PHONE_MODELS: Record<string, PhoneModel> = {
 
 const DEFAULT_MODEL_KEY = 'iphone15'
 const MAX_DOTS = 5000
+const DAYS_PER_WEEK = 7
 const DAY_MS = 24 * 60 * 60 * 1000
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 const FONT_FILES = ['Inter.ttf', 'RobotoMono.ttf'] as const
@@ -254,9 +255,27 @@ function generateWallpaperSvg(params: {
   const elapsed = clamp(daysInclusive(start, today), 0, totalDays)
   const remaining = totalDays - elapsed
   const progress = elapsed / totalDays
-  const truncated = totalDays > MAX_DOTS
-  const dotsToRender = Math.min(totalDays, MAX_DOTS)
-  const todayIndex = clamp(daysInclusive(start, today) - 1, 0, totalDays - 1)
+  const useWeeklyDots = totalDays > MAX_DOTS
+  const totalDotUnits = Math.max(
+    1,
+    useWeeklyDots ? Math.ceil(totalDays / DAYS_PER_WEEK) : totalDays,
+  )
+  const elapsedDotUnits = clamp(
+    useWeeklyDots ? Math.ceil(elapsed / DAYS_PER_WEEK) : elapsed,
+    0,
+    totalDotUnits,
+  )
+  const unitProgress = elapsedDotUnits / totalDotUnits
+  const truncated = totalDotUnits > MAX_DOTS
+  const dotsToRender = Math.min(totalDotUnits, MAX_DOTS)
+  const fullTodayIndex = clamp(elapsedDotUnits - 1, 0, totalDotUnits - 1)
+  const todayIndex = truncated
+    ? clamp(
+        Math.round(unitProgress * Math.max(dotsToRender - 1, 0)),
+        0,
+        dotsToRender - 1,
+      )
+    : fullTodayIndex
   const panelX = Math.round(width * 0.07)
   const panelWidth = width - panelX * 2
   const verticalNudge = clamp(Math.round(height * 0.06), 18, 220)
@@ -286,7 +305,9 @@ function generateWallpaperSvg(params: {
   const barY = statusY + 15
   const gridTop = barY + barHeight + 26
 
-  const footerReserve = truncated ? metaFontSize * 2 + 22 : metaFontSize + 12
+  const footerReserve = truncated
+    ? metaFontSize * 2 + 42
+    : metaFontSize + 22
   const maxGridBottom = panelY + panelHeight - bottomPadding - footerReserve
   const dotAreaHeight = Math.max(68, maxGridBottom - gridTop)
 
@@ -297,8 +318,11 @@ function generateWallpaperSvg(params: {
     wideDotAreaHeight,
   )
   const gridHeight = layout.rows * layout.dot + (layout.rows - 1) * layout.gap
-  const footerY = gridTop + gridHeight + 16 + metaFontSize
-  const truncationY = footerY - metaFontSize - 11
+  const footerTop = gridTop + gridHeight + 18
+  const truncationY = footerTop + metaFontSize
+  const footerY = truncated
+    ? truncationY + metaFontSize + 10
+    : footerTop + metaFontSize
 
   const dots: string[] = []
   const doneColor = '#e5e7eb'
@@ -335,6 +359,7 @@ function generateWallpaperSvg(params: {
         : 'goal complete'
   const statusLabel = `${Math.round(progress * 100)}% // ${statusRight}`
   const progressWidth = Math.max(0, Math.round(contentWidth * progress))
+  const dotModeLabel = useWeeklyDots ? 'weekly dots' : 'daily dots'
 
   return `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -353,10 +378,10 @@ function generateWallpaperSvg(params: {
       ${dots.join('\n')}
     </g>
 
-    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="${monoFont}">${elapsed}/${totalDays} days complete // TZ ${escapeXml(tz)}</text>
+    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="${monoFont}">${elapsed}/${totalDays} days complete // ${dotModeLabel} // TZ ${escapeXml(tz)}</text>
     ${
       truncated
-        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="${monoFont}">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
+        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="${monoFont}">Showing ${MAX_DOTS} ${useWeeklyDots ? 'weekly' : 'daily'} dots scaled to full date range</text>`
         : ''
     }
   </svg>

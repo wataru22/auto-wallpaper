@@ -432,7 +432,7 @@ function renderPage(): string {
     }
     h1 {
       margin: 0;
-      font-family: Inter, "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "RobotoMono", "Roboto Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: clamp(32px, 5vw, 56px);
       line-height: 1;
       letter-spacing: -0.02em;
@@ -470,7 +470,7 @@ function renderPage(): string {
     }
     .sectionTitle {
       margin: 80px 0 12px;
-      font-family: Inter, "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "RobotoMono", "Roboto Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: clamp(24px, 3.4vw, 40px);
       letter-spacing: -0.015em;
       color: #f0f2f6;

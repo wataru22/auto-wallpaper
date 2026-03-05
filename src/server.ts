@@ -565,19 +565,6 @@ function renderPage(): string {
       position: relative;
       overflow: hidden;
     }
-    .previewLoading {
-      position: absolute;
-      inset: 6px;
-      border-radius: 12px;
-      background: rgba(4, 5, 7, 0.72);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      color: #d7dce6;
-      backdrop-filter: blur(1px);
-      z-index: 1;
-    }
     .previewCol {
       display: flex;
       justify-content: flex-end;
@@ -824,7 +811,6 @@ function renderPage(): string {
         </div>
         <div class="previewCol">
           <div class="previewShell">
-            <div id="previewLoading" class="previewLoading" hidden>Loading preview...</div>
             <img id="preview" alt="Wallpaper preview" />
           </div>
         </div>
@@ -871,7 +857,6 @@ function renderPage(): string {
     const form = document.getElementById('wallpaperForm');
     const urlOutput = document.getElementById('urlOutput');
     const preview = document.getElementById('preview');
-    const previewLoading = document.getElementById('previewLoading');
     const generateButton = document.getElementById('generateUrl');
     const copyButton = document.getElementById('copyUrl');
     const startInput = document.getElementById('start');
@@ -971,7 +956,6 @@ function renderPage(): string {
     function setGeneratingState(generating) {
       generateButton.disabled = generating;
       generateButton.textContent = generating ? 'Generating...' : 'Generate URL';
-      previewLoading.hidden = !generating;
     }
 
     function positionPicker() {

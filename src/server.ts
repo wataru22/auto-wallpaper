@@ -322,8 +322,9 @@ function generateWallpaperSvg(params: {
     )
   }
 
-  const startText = formatFriendlyDate(start)
-  const deadlineText = formatFriendlyDate(deadline)
+  const startText = dateToIso(start)
+  const deadlineText = dateToIso(deadline)
+  const monoFont = "RobotoMono, 'Roboto Mono', ui-monospace, Menlo, monospace"
   const escapedGoal = escapeXml(goal)
 
   const statusRight =
@@ -340,10 +341,10 @@ function generateWallpaperSvg(params: {
     <rect x="0" y="0" width="${width}" height="${height}" fill="#050608" />
     <rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="none" stroke="#111319" />
 
-    <text x="${contentX}" y="${goalY}" fill="#f5f5f6" font-size="${goalFontSize}" font-weight="700" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${escapedGoal}</text>
-    <text x="${contentX}" y="${rangeY}" fill="#a3abba" font-size="${rangeFontSize}" font-weight="500" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${startText} -> ${deadlineText}</text>
+    <text x="${contentX}" y="${goalY}" fill="#f5f5f6" font-size="${goalFontSize}" font-weight="700" font-family="${monoFont}">${escapedGoal}</text>
+    <text x="${contentX}" y="${rangeY}" fill="#a3abba" font-size="${rangeFontSize}" font-weight="400" font-family="${monoFont}">${startText} → ${deadlineText}</text>
 
-    <text x="${contentX}" y="${statusY}" fill="#dde1e8" font-size="${statusFontSize}" font-weight="600" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${escapeXml(statusLabel)}</text>
+    <text x="${contentX}" y="${statusY}" fill="#dde1e8" font-size="${statusFontSize}" font-weight="600" font-family="${monoFont}">${escapeXml(statusLabel)}</text>
 
     <rect x="${contentX}" y="${barY}" width="${contentWidth}" height="${barHeight}" rx="${barRadius}" fill="#262a32" />
     <rect x="${contentX}" y="${barY}" width="${progressWidth}" height="${barHeight}" rx="${barRadius}" fill="#d7dce5" />
@@ -352,10 +353,10 @@ function generateWallpaperSvg(params: {
       ${dots.join('\n')}
     </g>
 
-    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="Roboto Mono, ui-monospace, Menlo, monospace">${elapsed}/${totalDays} days complete // TZ ${escapeXml(tz)}</text>
+    <text x="${contentX}" y="${footerY}" fill="#8f98a9" font-size="${metaFontSize}" font-family="${monoFont}">${elapsed}/${totalDays} days complete // TZ ${escapeXml(tz)}</text>
     ${
       truncated
-        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="Roboto Mono, ui-monospace, Menlo, monospace">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
+        ? `<text x="${contentX}" y="${truncationY}" fill="#c2a891" font-size="${metaFontSize}" font-family="${monoFont}">Showing first ${MAX_DOTS} dots (date range is larger)</text>`
         : ''
     }
   </svg>
@@ -494,6 +495,10 @@ function renderPage(): string {
     input[type="date"] {
       color-scheme: dark;
     }
+    #start,
+    #deadline {
+      font-family: "RobotoMono", "Roboto Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
     input:focus, select:focus {
       outline: none;
       background: rgba(255, 255, 255, 0.065);
@@ -515,6 +520,11 @@ function renderPage(): string {
     }
     button:hover {
       opacity: 0.88;
+    }
+    button:disabled {
+      opacity: 0.62;
+      cursor: wait;
+      pointer-events: none;
     }
     .primary {
       background: #f0f1f3;
@@ -552,6 +562,21 @@ function renderPage(): string {
       border-radius: 18px;
       background: rgba(255, 255, 255, 0.02);
       padding: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .previewLoading {
+      position: absolute;
+      inset: 6px;
+      border-radius: 12px;
+      background: rgba(4, 5, 7, 0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: #d7dce6;
+      backdrop-filter: blur(1px);
+      z-index: 1;
     }
     .previewCol {
       display: flex;
@@ -790,7 +815,7 @@ function renderPage(): string {
               <select id="tz" name="tz">${timeZoneOptions}</select>
             </div>
             <div class="actions full">
-              <button type="submit" class="primary">Generate URL</button>
+              <button type="submit" id="generateUrl" class="primary">Generate URL</button>
               <button type="button" id="copyUrl" class="ghost">Copy URL</button>
             </div>
           </form>
@@ -799,6 +824,7 @@ function renderPage(): string {
         </div>
         <div class="previewCol">
           <div class="previewShell">
+            <div id="previewLoading" class="previewLoading" hidden>Loading preview...</div>
             <img id="preview" alt="Wallpaper preview" />
           </div>
         </div>
@@ -845,6 +871,8 @@ function renderPage(): string {
     const form = document.getElementById('wallpaperForm');
     const urlOutput = document.getElementById('urlOutput');
     const preview = document.getElementById('preview');
+    const previewLoading = document.getElementById('previewLoading');
+    const generateButton = document.getElementById('generateUrl');
     const copyButton = document.getElementById('copyUrl');
     const startInput = document.getElementById('start');
     const deadlineInput = document.getElementById('deadline');
@@ -878,6 +906,7 @@ function renderPage(): string {
     let pickerYear = 0;
     let copyFadeTimer = null;
     let copyResetTimer = null;
+    let previewLoadingTimeout = null;
 
     function toIsoLocal(date) {
       const year = date.getFullYear();
@@ -937,6 +966,12 @@ function renderPage(): string {
     function resetCopyButton() {
       copyButton.classList.remove('copySuccess', 'fadeOut');
       copyButton.textContent = 'Copy URL';
+    }
+
+    function setGeneratingState(generating) {
+      generateButton.disabled = generating;
+      generateButton.textContent = generating ? 'Generating...' : 'Generate URL';
+      previewLoading.hidden = !generating;
     }
 
     function positionPicker() {
@@ -1042,7 +1077,19 @@ function renderPage(): string {
     function refresh() {
       const url = buildUrl();
       urlOutput.textContent = url;
+      setGeneratingState(true);
+      if (previewLoadingTimeout) {
+        clearTimeout(previewLoadingTimeout);
+      }
+      previewLoadingTimeout = setTimeout(() => {
+        setGeneratingState(false);
+      }, 8000);
       preview.src = url + '&preview=1&_preview=' + Date.now();
+      setTimeout(() => {
+        if (preview.complete) {
+          setGeneratingState(false);
+        }
+      }, 0);
     }
 
     [startInput, deadlineInput].forEach((input) => {
@@ -1139,6 +1186,16 @@ function renderPage(): string {
       event.preventDefault();
       refresh();
     });
+
+    function finishPreviewLoad() {
+      if (previewLoadingTimeout) {
+        clearTimeout(previewLoadingTimeout);
+      }
+      setGeneratingState(false);
+    }
+
+    preview.addEventListener('load', finishPreviewLoad);
+    preview.addEventListener('error', finishPreviewLoad);
 
     copyButton.addEventListener('click', async () => {
       const text = urlOutput.textContent || '';

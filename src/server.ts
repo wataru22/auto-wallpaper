@@ -34,6 +34,8 @@ type FontFileName = (typeof FONT_FILES)[number]
 const MONO_FONT_FAMILY = 'JetBrains Mono'
 const MONO_FONT_STACK =
   '"JetBrains Mono", "JetBrainsMono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+const MONO_FONT_SVG_STACK =
+  "'JetBrains Mono', JetBrainsMono, ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
 const FALLBACK_TIME_ZONES = [
   'UTC',
   'America/New_York',
@@ -354,7 +356,7 @@ function generateWallpaperSvg(params: {
 
   const startText = dateToIso(start)
   const deadlineText = dateToIso(deadline)
-  const monoFont = MONO_FONT_STACK
+  const monoFont = MONO_FONT_SVG_STACK
   const escapedGoal = escapeXml(goal)
 
   const statusRight =
@@ -1299,8 +1301,8 @@ function errorImage(message: string): Response {
   const svg = `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="${width}" height="${height}" fill="#0d111a" />
-    <text x="80" y="240" fill="#f8fafc" font-size="58" font-family="${MONO_FONT_STACK}" font-weight="700">Goal Wallpaper Error</text>
-    <text x="80" y="330" fill="#fcb7b7" font-size="38" font-family="${MONO_FONT_STACK}">${safeMessage}</text>
+    <text x="80" y="240" fill="#f8fafc" font-size="58" font-family="${MONO_FONT_SVG_STACK}" font-weight="700">Goal Wallpaper Error</text>
+    <text x="80" y="330" fill="#fcb7b7" font-size="38" font-family="${MONO_FONT_SVG_STACK}">${safeMessage}</text>
   </svg>
   `
 

@@ -29,7 +29,13 @@ const MAX_DOTS = 5000
 const DAYS_PER_WEEK = 7
 const DAY_MS = 24 * 60 * 60 * 1000
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
-const FONT_FILES = ['Inter.ttf', 'RobotoMono.ttf'] as const
+const FONT_FILES = ['JetBrainsMono.ttf'] as const
+type FontFileName = (typeof FONT_FILES)[number]
+const MONO_FONT_FAMILY = 'JetBrains Mono'
+const MONO_FONT_STACK =
+  '"JetBrains Mono", "JetBrainsMono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+const MONO_FONT_SVG_STACK =
+  "'JetBrains Mono', JetBrainsMono, ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
 const FALLBACK_TIME_ZONES = [
   'UTC',
   'America/New_York',
@@ -61,6 +67,10 @@ const TIME_ZONES = (() => {
 
 let cachedFontFiles: string[] | null = null
 
+function fontFilePath(fileName: FontFileName): string {
+  return fileURLToPath(new URL(`../fonts/${fileName}`, import.meta.url))
+}
+
 function loadFontFiles(): string[] {
   if (cachedFontFiles) {
     return cachedFontFiles
@@ -69,9 +79,7 @@ function loadFontFiles(): string[] {
   const files: string[] = []
 
   for (const fileName of FONT_FILES) {
-    const filePath = fileURLToPath(
-      new URL(`../fonts/${fileName}`, import.meta.url),
-    )
+    const filePath = fontFilePath(fileName)
     if (existsSync(filePath)) {
       files.push(filePath)
     }
@@ -348,7 +356,7 @@ function generateWallpaperSvg(params: {
 
   const startText = dateToIso(start)
   const deadlineText = dateToIso(deadline)
-  const monoFont = "RobotoMono, 'Roboto Mono', ui-monospace, Menlo, monospace"
+  const monoFont = MONO_FONT_SVG_STACK
   const escapedGoal = escapeXml(goal)
 
   const statusRight =
@@ -403,7 +411,13 @@ function renderPage(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Auto Wallpaper</title>
   <style>
+    @font-face {
+      font-family: "${MONO_FONT_FAMILY}";
+      src: local("${MONO_FONT_FAMILY}"), local("JetBrainsMono"), url("/fonts/JetBrainsMono.ttf") format("truetype");
+      font-display: swap;
+    }
     :root {
+      --mono-font: ${MONO_FONT_STACK};
       --bg: #040507;
       --panel: rgba(255, 255, 255, 0.02);
       --line: rgba(255, 255, 255, 0.08);
@@ -424,7 +438,7 @@ function renderPage(): string {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-family: var(--mono-font);
       line-height: 1.5;
     }
     .hero {
@@ -432,7 +446,6 @@ function renderPage(): string {
     }
     h1 {
       margin: 0;
-      font-family: "RobotoMono", "Roboto Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: clamp(32px, 5vw, 56px);
       line-height: 1;
       letter-spacing: -0.02em;
@@ -470,7 +483,6 @@ function renderPage(): string {
     }
     .sectionTitle {
       margin: 80px 0 12px;
-      font-family: "RobotoMono", "Roboto Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: clamp(24px, 3.4vw, 40px);
       letter-spacing: -0.015em;
       color: #f0f2f6;
@@ -519,10 +531,6 @@ function renderPage(): string {
     }
     input[type="date"] {
       color-scheme: dark;
-    }
-    #start,
-    #deadline {
-      font-family: "RobotoMono", "Roboto Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     input:focus, select:focus {
       outline: none;
@@ -1264,7 +1272,7 @@ function imageResponse(
     background: 'rgba(0,0,0,1)',
     font: {
       loadSystemFonts: true,
-      defaultFontFamily: 'Roboto Mono',
+      defaultFontFamily: MONO_FONT_FAMILY,
       fontFiles,
     },
   })
@@ -1293,8 +1301,8 @@ function errorImage(message: string): Response {
   const svg = `
   <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="${width}" height="${height}" fill="#0d111a" />
-    <text x="80" y="240" fill="#f8fafc" font-size="58" font-family="Arial" font-weight="700">Goal Wallpaper Error</text>
-    <text x="80" y="330" fill="#fcb7b7" font-size="38" font-family="Arial">${safeMessage}</text>
+    <text x="80" y="240" fill="#f8fafc" font-size="58" font-family="${MONO_FONT_SVG_STACK}" font-weight="700">Goal Wallpaper Error</text>
+    <text x="80" y="330" fill="#fcb7b7" font-size="38" font-family="${MONO_FONT_SVG_STACK}">${safeMessage}</text>
   </svg>
   `
 
@@ -1303,6 +1311,18 @@ function errorImage(message: string): Response {
 
 export function handleRequest(request: Request): Response {
   const url = new URL(request.url)
+  const fontFileName = FONT_FILES.find(
+    (fileName) => url.pathname === `/fonts/${fileName}`,
+  )
+
+  if (fontFileName) {
+    return new Response(Bun.file(fontFilePath(fontFileName)), {
+      headers: {
+        'content-type': 'font/ttf',
+        'cache-control': 'public, max-age=31536000, immutable',
+      },
+    })
+  }
 
   if (url.pathname === '/health') {
     return new Response('ok', {

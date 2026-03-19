@@ -29,7 +29,7 @@ const MAX_DOTS = 5000
 const DAYS_PER_WEEK = 7
 const DAY_MS = 24 * 60 * 60 * 1000
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
-const FONT_FILES = ['JetBrainsMono.ttf'] as const
+const FONT_FILES = ['JetBrainsMonoSlashedZero.ttf'] as const
 type FontFileName = (typeof FONT_FILES)[number]
 const MONO_FONT_FAMILY = 'JetBrains Mono'
 const MONO_FONT_STACK =
@@ -413,7 +413,7 @@ function renderPage(): string {
   <style>
     @font-face {
       font-family: "${MONO_FONT_FAMILY}";
-      src: local("${MONO_FONT_FAMILY}"), local("JetBrainsMono"), url("/fonts/JetBrainsMono.ttf") format("truetype");
+      src: url("/fonts/JetBrainsMonoSlashedZero.ttf") format("truetype");
       font-display: swap;
     }
     :root {
